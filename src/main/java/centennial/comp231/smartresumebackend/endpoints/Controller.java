@@ -2,6 +2,7 @@ package centennial.comp231.smartresumebackend.endpoints;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,6 +11,8 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -35,8 +38,12 @@ import centennial.comp231.smartresumebackend.service.AppPDFParser;
 @RestController
 public class Controller {
 
+	Logger logger = LoggerFactory.getLogger(Controller.class);
 	@Autowired
 	AppPDFParser appPDFParser;
+//	
+//	@Autowired
+//    private HttpServletRequest request;
 	
 	Map<String, RegistrationInfo> userMap = new HashMap<>();
 	Map<String, List<Job>> userJobMap = new HashMap<>();
@@ -241,30 +248,60 @@ public class Controller {
 		return null;
 	}
 
-	@RequestMapping(value="/uploadJobDescription" , method=RequestMethod.POST, 
-			consumes="multipart/form-data", produces="application/json")  
-	public ResponseEntity<?> uploadJobDescription(HttpServletRequest req, 
-			@RequestParam(value="file" , required = false) MultipartFile file) throws IOException{
-		try {
-			System.err.println(file.getOriginalFilename());
-		} catch (IllegalStateException e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-	
 	@RequestMapping(value="/uploadResume" , method=RequestMethod.POST, 
 			consumes="multipart/form-data", produces="application/json")  
 	public ResponseEntity<?> uploadResume(HttpServletRequest req, 
 			@RequestParam(value="file" , required = false) MultipartFile file) throws Exception{
 		try {
 			System.err.println(file.getOriginalFilename());
-			return new ResponseEntity<>(appPDFParser.readPDF(file), HttpStatus.OK);
+			String path = transferFileAndReturnPath(file);
+			return new ResponseEntity<String>(path, HttpStatus.OK);
 		} catch (IllegalStateException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
+	
+	private String transferFileAndReturnPath(MultipartFile file) throws Exception {
+		if (!file.isEmpty()) {
+            try {
+                String uploadsDir = "\\uploads\\";
+                
+                //gets System TEMP path
+                //String realPathtoUploads =  request.getServletContext().getRealPath(uploadsDir);
+                
+                String realPathtoUploads =  Paths.get("").toAbsolutePath().toString()+uploadsDir;
+				if(! new File(realPathtoUploads ).exists())
+                {
+                    new File(realPathtoUploads).mkdir();
+                }
+
+                logger.info("realPathtoUploads = {}", realPathtoUploads);
+                String orgName = file.getOriginalFilename();
+                String filePath = realPathtoUploads + orgName;
+                File dest = new File(filePath);
+                file.transferTo(dest);
+                return filePath;
+            }catch(Exception ex) {
+            	logger.error(ex.toString());
+            	throw ex;
+            }}
+		else
+			throw new Exception("No files selected");
+	}
+
+//	@RequestMapping(value="/uploadJobDescription" , method=RequestMethod.POST, 
+//			consumes="multipart/form-data", produces="application/json")  
+//	public ResponseEntity<?> uploadJobDescription(HttpServletRequest req, 
+//			@RequestParam(value="file" , required = false) MultipartFile file) throws Exception{
+//		try {
+//			System.err.println(file.getOriginalFilename());
+//			return new ResponseEntity<>(appPDFParser.readPDF(file), HttpStatus.OK);
+//		} catch (IllegalStateException e) {
+//			e.printStackTrace();
+//		}
+//		return null;
+//	}
 	
 	
 	
