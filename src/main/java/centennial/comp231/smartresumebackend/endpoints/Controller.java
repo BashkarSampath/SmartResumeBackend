@@ -255,7 +255,7 @@ public class Controller {
 		try {
 			System.err.println(file.getOriginalFilename());
 			String path = transferFileAndReturnPath(file);
-			return new ResponseEntity<String>(path, HttpStatus.OK);
+			return new ResponseEntity<String>("This is mock. Will be uploaded to " +path, HttpStatus.OK);
 		} catch (IllegalStateException e) {
 			e.printStackTrace();
 		}
@@ -279,8 +279,8 @@ public class Controller {
                 logger.info("realPathtoUploads = {}", realPathtoUploads);
                 String orgName = file.getOriginalFilename();
                 String filePath = realPathtoUploads + orgName;
-                File dest = new File(filePath);
-                file.transferTo(dest);
+                //File dest = new File(filePath);
+                //file.transferTo(dest);
                 return filePath;
             }catch(Exception ex) {
             	logger.error(ex.toString());
