@@ -9,11 +9,10 @@
 		<version>2.1.5.RELEASE</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>centennial.comp231</groupId>
-	<artifactId>smart-resume-backend</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>smart-resume-backend</name>
-	<description>Demo project for Spring Boot</description>
+	<groupId>team6</groupId>
+	<artifactId>springbootresumebackend</artifactId>
+	<version>0.1-SNAPSHOT</version>
+	<name>springbootresumebackend</name>
 
 	<properties>
 		<java.version>1.8</java.version>
