@@ -23,7 +23,7 @@ public class SmartResumeBackendApplicationTests {
 	
 	 @Before
 	    public void setUp() throws Exception {
-	        RegistrationInfo user1= new RegistrationInfo("alice@gmail.com", "Alice", "Applicant");
+	        RegistrationInfo user1= new RegistrationInfo("Alice@gmail.com", "Alice", "Applicant");
 	        RegistrationInfo user2= new RegistrationInfo("Bob@gmail.com", "Bob", "Applicant");
 	        //save user, verify has ID value after save
 	        assertNull(user1.getEmail());
