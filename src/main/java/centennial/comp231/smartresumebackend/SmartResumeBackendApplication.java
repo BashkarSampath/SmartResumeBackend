@@ -11,7 +11,6 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EntityScan("centennial.comp231.smartresumebackend.*")  
 @SpringBootApplication
 public class SmartResumeBackendApplication {
-
 	public static void main(String[] args) {
 		SpringApplication.run(SmartResumeBackendApplication.class, args);
 	}
