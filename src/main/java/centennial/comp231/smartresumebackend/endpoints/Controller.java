@@ -40,7 +40,6 @@ import centennial.comp231.smartresumebackend.repos.RegistrationRepository;
 import centennial.comp231.smartresumebackend.repos.UserJobRepository;
 import centennial.comp231.smartresumebackend.service.AppPDFParser;
 import centennial.comp231.smartresumebackend.service.QueryService;
-import centennial.comp231.smartresumebackend.service.UploadBlob;
 import lombok.extern.slf4j.Slf4j;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*")
