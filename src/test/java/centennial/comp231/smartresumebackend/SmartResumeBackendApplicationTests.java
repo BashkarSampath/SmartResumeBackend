@@ -43,7 +43,7 @@ public class SmartResumeBackendApplicationTests {
         /*Get all products, list should only have two*/
         Iterable<RegistrationInfo> users = userRepository.findAll();
         int count = 0;
-        for(RegistrationInfo x : users){
+        for(@SuppressWarnings("unused") RegistrationInfo x : users){
             count++;
         }
         assertEquals(count, 2);
