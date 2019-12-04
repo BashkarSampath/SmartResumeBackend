@@ -2,14 +2,13 @@ package centennial.comp231.smartresumebackend.endpoints;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
-import javax.persistence.RollbackException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.google.gson.Gson;
+import com.microsoft.azure.storage.StorageException;
+import com.microsoft.azure.storage.blob.CloudBlobContainer;
+import com.microsoft.azure.storage.blob.CloudBlockBlob;
 
 import centennial.comp231.smartresumebackend.POJO.CandidateProfile;
 import centennial.comp231.smartresumebackend.POJO.Job;
@@ -37,6 +39,8 @@ import centennial.comp231.smartresumebackend.repos.JobRepository;
 import centennial.comp231.smartresumebackend.repos.RegistrationRepository;
 import centennial.comp231.smartresumebackend.repos.UserJobRepository;
 import centennial.comp231.smartresumebackend.service.AppPDFParser;
+import centennial.comp231.smartresumebackend.service.QueryService;
+import centennial.comp231.smartresumebackend.service.UploadBlob;
 import lombok.extern.slf4j.Slf4j;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*")
@@ -55,7 +59,10 @@ public class Controller {
 
 	@Autowired
 	JobRepository jobRepository;
-
+	
+	@Autowired
+	QueryService queryService;
+	
 	@Autowired
 	AppPDFParser appPDFParser;
 	//	
@@ -207,7 +214,7 @@ public class Controller {
 			return gson.toJson(response);
 		}
 		else {
-			Response response = new Response(null,"No job found");
+			Response response = new Response(null,"No jobs found");
 			return gson.toJson(response);
 		}
 	}
@@ -215,10 +222,18 @@ public class Controller {
 	@RequestMapping(value = "/applyjob", method = RequestMethod.POST)
 	public String applyJob(@RequestBody String payload) {
 		UserJob userJob = gson.fromJson(payload, UserJob.class);
-		if(userJob!=null && jobRepository.findByJobId(userJob.getJobId()) !=null) {
+		Job availableJob = jobRepository.findByJobId(userJob.getJobId());
+		if(userJob!=null && userJob.getEmail().trim()!=""&&  userJob.getJobId()!=0 && availableJob !=null) {
 			UserJob appliedJob = userJobRepository.findByEmailAndJobId(userJob.getEmail(), userJob.getJobId());
 			if (appliedJob==null) {
-				Response response = new Response(userJobMap.get(userJob.getEmail()), "Congratulations! You have applied to " + allJobs.get(userJob.getJobId()).getJobTitle());
+				UserJob newApplication = new UserJob();
+				newApplication.setEmail(userJob.getEmail().toLowerCase().trim());
+				newApplication.setJobId(userJob.getJobId());
+				userJobRepository.save(newApplication);
+				Response response = new Response(userJobMap.get(userJob.getEmail()), 
+						"Congratulations! You have applied to " 
+								+availableJob.getJobTitle() +
+								" with id " + availableJob.getJobId());
 				return gson.toJson(response);
 			}
 			else{
@@ -234,9 +249,9 @@ public class Controller {
 @RequestMapping(value = "/appliedjobs", method = RequestMethod.POST)
 public String appliedJobs(@RequestBody String payload) {
 	RegistrationInfo registrationInfo = gson.fromJson(payload, RegistrationInfo.class);
-	if (userMap.containsKey(registrationInfo.getEmail())) {
-		List<Job> jobsForUser = userJobMap.get(registrationInfo.getEmail());
-		return gson.toJson(jobsForUser);
+	if (registrationInfo!=null && registrationInfo.getEmail().trim()!="") {
+		List<Job> appliedJobs = queryService.findJobsAppliedByJoinJobAndUserJob(registrationInfo.getEmail().toLowerCase().trim());
+		return gson.toJson(new Response(appliedJobs,""));
 	} else {
 		Response response = new Response(registrationInfo.getEmail(), "Email not registered");
 		return gson.toJson(response);
@@ -245,21 +260,20 @@ public String appliedJobs(@RequestBody String payload) {
 
 @RequestMapping(value = "/candidatesforjob", method = RequestMethod.POST)
 public String candidatesForJob(@RequestBody String payload) {
-	Job job = gson.fromJson(payload, Job.class);
-	if (allJobs.containsKey(job.getJobId())) {
-		List<CandidateProfile> candidatesAppliedForJob = new ArrayList<>();
-		Set<String> allUsersWhoAppliedAnyJob = userJobMap.keySet();
-		for (String userEmail : allUsersWhoAppliedAnyJob) {
-			List<Job> jobsForUser = userJobMap.get(userEmail);
-			for (Job currentJob : jobsForUser) {
-				//					if (currentJob.getJobId().equals(job.getJobId())) {
-				//						candidatesAppliedForJob.add(candidateProfileMap.get(userEmail));
-				//					}
-			}
-		}
-		return gson.toJson(candidatesAppliedForJob);
+	UserJob userjob = gson.fromJson(payload, UserJob.class);
+	Job jobExists = null;
+	if(userjob!=null && userjob.getJobId()!=0)
+	{
+		jobExists = jobRepository.findByJobId(userjob.getJobId());
+		if(jobExists!=null) {
+			List<CandidateProfile> candidatesAppliedForJob = queryService.findCandidatesAppliedByJoinCandidateProfileAndUserJob(userjob.getJobId());
+			return gson.toJson(candidatesAppliedForJob);
+		}else {
+			Response response = new Response(userjob.getJobId(), "No one applied for the job id");
+			return gson.toJson(response);
+		}	
 	} else {
-		Response response = new Response(job.getJobId(), "Job ID does not exist");
+		Response response = new Response(userjob.getJobId(), "Job ID does not exist");
 		return gson.toJson(response);
 	}
 }
@@ -286,19 +300,48 @@ public ResponseEntity<?> mutipleFileUpload(HttpServletRequest req,
 	return null;
 }
 
-@RequestMapping(value="/uploadResume" , method=RequestMethod.POST, 
-consumes="multipart/form-data", produces="application/json")  
+@Autowired
+CloudBlobContainer cloudBlobContainer;
+
+@RequestMapping(value="/uploadResume" , method=RequestMethod.POST,
+consumes="multipart/form-data", produces="application/json")
 public ResponseEntity<?> uploadResume(HttpServletRequest req, 
-		@RequestParam(value="file" , required = false) MultipartFile file) throws Exception{
+		@RequestParam(value="file" , required = true) MultipartFile file, @RequestParam(value="email" , required = true) String email) throws Exception{
+	URI uri = null;
+	CloudBlockBlob blob = null;
+	CandidateProfile candidate = profileRepository.findByEmail(email.toLowerCase().trim());
 	try {
-		System.err.println(file.getOriginalFilename());
-		String path = transferFileAndReturnPath(file);
-		return new ResponseEntity<String>("This is mock. Will be uploaded to " +path, HttpStatus.OK);
-	} catch (IllegalStateException e) {
+		String ofilename = file.getOriginalFilename();
+		System.err.println(ofilename);
+		blob = cloudBlobContainer.getBlockBlobReference(ofilename);
+		blob.upload(file.getInputStream(), -1);
+		uri = blob.getUri();
+		candidate.setResumeLink(uri.toASCIIString());
+		profileRepository.save(candidate);
+	} catch (URISyntaxException e) {
+		e.printStackTrace();
+	} catch (StorageException e) {
+		e.printStackTrace();
+	}catch (IOException e) {
 		e.printStackTrace();
 	}
-	return null;
+	return new ResponseEntity<String>("{\"path\":\""+uri.toASCIIString()+"\"}", HttpStatus.OK);
 }
+
+//@RequestMapping(value="/uploadResume" , method=RequestMethod.POST, 
+//consumes="multipart/form-data", produces="application/json")  
+//void n() {
+//	try {
+//		URI uri = new UploadBlob().upload(file);
+//		System.err.println(file.getOriginalFilename());
+//		System.out.println("URI: "+ uri);
+//		String path = transferFileAndReturnPath(file);
+//		return new ResponseEntity<String>("This is mock. Will be uploaded to " +path+" with uri "+uri, HttpStatus.OK);
+//	} catch (IllegalStateException e) {
+//		e.printStackTrace();
+//	}
+//	return null;
+//}
 
 private String transferFileAndReturnPath(MultipartFile file) throws Exception {
 	if (!file.isEmpty()) {
