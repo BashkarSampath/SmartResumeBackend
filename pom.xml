@@ -36,6 +36,19 @@
 			<artifactId>lombok</artifactId>
 			<scope>provided</scope>
 		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.microsoft.azure/azure-storage-blob -->
+<dependency>
+    <groupId>com.microsoft.azure</groupId>
+    <artifactId>azure-storage-blob</artifactId>
+    <version>11.0.1</version>
+</dependency>
+		<!-- https://mvnrepository.com/artifact/com.microsoft.azure/azure-storage -->
+<dependency>
+    <groupId>com.microsoft.azure</groupId>
+    <artifactId>azure-storage</artifactId>
+    <version>8.4.0</version>
+</dependency>
+		
 		<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson-parent -->
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
