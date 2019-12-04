@@ -27,7 +27,8 @@ public class UserJob implements Serializable{
     private String email;
 	@NotNull
     private long jobId;
-    @Override
+ 
+	@Override
     public String toString() {
         return new Gson().toJson(this);
     }

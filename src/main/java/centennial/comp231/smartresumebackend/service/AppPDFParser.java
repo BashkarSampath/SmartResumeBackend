@@ -24,6 +24,4 @@ public class AppPDFParser {
 	    	throw ex;
 	    }   
 	}
-	
-	
 }

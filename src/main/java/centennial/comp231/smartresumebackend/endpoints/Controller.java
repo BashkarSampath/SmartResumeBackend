@@ -63,9 +63,6 @@ public class Controller {
 	
 	@Autowired
 	AppPDFParser appPDFParser;
-	//	
-	//	@Autowired
-	//    private HttpServletRequest request;
 
 	Map<String, RegistrationInfo> userMap = new HashMap<>();
 	Map<String, List<Job>> userJobMap = new HashMap<>();

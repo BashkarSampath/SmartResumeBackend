@@ -30,7 +30,6 @@ public class Job {
     private String jobTitle;
 	@NotNull
     private String jobDescription;
-
 	@NotNull
     private String companyName;
 	@NotNull

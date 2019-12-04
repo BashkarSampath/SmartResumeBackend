@@ -17,8 +17,7 @@ public class Response {
     public Response() {
         this.object = new Object();
         this.message = "empty response";
-    }
-    
+    }  
     @Override
     public String toString() {
         return new Gson().toJson(this);

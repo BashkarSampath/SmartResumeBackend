@@ -8,4 +8,5 @@ import centennial.comp231.smartresumebackend.POJO.UserJob;
 public interface CandidateProfileRepository extends CrudRepository<CandidateProfile, UserJob> {
     CandidateProfile findByName(String name);
     CandidateProfile findByEmail(String email);
+    CandidateProfile findByPhone(long phone);
 }

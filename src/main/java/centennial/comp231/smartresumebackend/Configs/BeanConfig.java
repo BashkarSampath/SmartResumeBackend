@@ -15,7 +15,6 @@ import com.microsoft.azure.storage.blob.CloudBlobContainer;
 
 @Configuration
 public class BeanConfig {
-
     @Autowired
     private Environment environment;
 

@@ -47,5 +47,4 @@ public class QueryService implements IQueryService {
         em.close();
         return list;
 	}
-
 }

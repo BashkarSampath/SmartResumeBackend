@@ -18,7 +18,6 @@ public class WatchingInputStream extends FilterInputStream {
         super(in);
         this.listener = listener;
     }
-
     @Override
     public int read(byte[] buffer, int offset, int count) throws IOException {
         int advanced = super.read(buffer, offset, count);

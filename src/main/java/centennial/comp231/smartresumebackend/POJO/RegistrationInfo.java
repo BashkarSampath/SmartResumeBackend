@@ -21,7 +21,6 @@ public class RegistrationInfo {
     private String email;
     private String password;
     private String role;
-
     @Override
     public String toString() {
         return new Gson().toJson(this);
