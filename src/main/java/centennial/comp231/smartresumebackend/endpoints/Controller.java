@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -342,33 +341,33 @@ public ResponseEntity<?> uploadResume(HttpServletRequest req,
 //	return null;
 //}
 
-private String transferFileAndReturnPath(MultipartFile file) throws Exception {
-	if (!file.isEmpty()) {
-		try {
-			String uploadsDir = "\\uploads\\";
-
-			//gets System TEMP path
-			//String realPathtoUploads =  request.getServletContext().getRealPath(uploadsDir);
-
-			String realPathtoUploads =  Paths.get("").toAbsolutePath().toString()+uploadsDir;
-			if(! new File(realPathtoUploads ).exists())
-			{
-				new File(realPathtoUploads).mkdir();
-			}
-
-			log.info("realPathtoUploads = {}", realPathtoUploads);
-			String orgName = file.getOriginalFilename();
-			String filePath = realPathtoUploads + orgName;
-			//File dest = new File(filePath);
-			//file.transferTo(dest);
-			return filePath;
-		}catch(Exception ex) {
-			log.error(ex.toString());
-			throw ex;
-		}}
-	else
-		throw new Exception("No files selected");
-}
+//private String transferFileAndReturnPath(MultipartFile file) throws Exception {
+//	if (!file.isEmpty()) {
+//		try {
+//			String uploadsDir = "\\uploads\\";
+//
+//			//gets System TEMP path
+//			//String realPathtoUploads =  request.getServletContext().getRealPath(uploadsDir);
+//
+//			String realPathtoUploads =  Paths.get("").toAbsolutePath().toString()+uploadsDir;
+//			if(! new File(realPathtoUploads ).exists())
+//			{
+//				new File(realPathtoUploads).mkdir();
+//			}
+//
+//			log.info("realPathtoUploads = {}", realPathtoUploads);
+//			String orgName = file.getOriginalFilename();
+//			String filePath = realPathtoUploads + orgName;
+//			//File dest = new File(filePath);
+//			//file.transferTo(dest);
+//			return filePath;
+//		}catch(Exception ex) {
+//			log.error(ex.toString());
+//			throw ex;
+//		}}
+//	else
+//		throw new Exception("No files selected");
+//}
 
 //	@RequestMapping(value="/uploadJobDescription" , method=RequestMethod.POST, 
 //			consumes="multipart/form-data", produces="application/json")  
