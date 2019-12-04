@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
 
 import centennial.comp231.smartresumebackend.POJO.Job;
 
@@ -19,4 +20,7 @@ public interface JobRepository extends CrudRepository<Job, Long> {
     List<Job> findAllJobs();
     
     List<Job> findByPostingExpiryDateGreaterThanEqual(String todayDate);
+    
+    @Query(value = "SELECT * FROM Job LEFT JOIN UserJob ON Job.jobId=UserJob.jobId WHERE UserJob.email = :email", nativeQuery = true)
+    List<Job> findByJoinEmailAddress(@Param("email") String email);
 }

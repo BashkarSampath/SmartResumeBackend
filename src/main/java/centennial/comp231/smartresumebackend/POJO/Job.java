@@ -1,6 +1,7 @@
 package centennial.comp231.smartresumebackend.POJO;
 
 import javax.annotation.Nullable;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -22,6 +23,7 @@ import lombok.Setter;
 public class Job {
 	
 	@Id
+	@Column(unique = true, nullable = false,length = 8)
 	@GeneratedValue(strategy=GenerationType.AUTO)
     private long jobId;
 	@NotNull
