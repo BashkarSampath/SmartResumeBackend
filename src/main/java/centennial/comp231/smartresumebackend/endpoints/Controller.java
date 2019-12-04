@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,16 +12,21 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.google.gson.Gson;
@@ -39,6 +45,12 @@ import centennial.comp231.smartresumebackend.repos.RegistrationRepository;
 import centennial.comp231.smartresumebackend.repos.UserJobRepository;
 import centennial.comp231.smartresumebackend.service.AppPDFParser;
 import centennial.comp231.smartresumebackend.service.QueryService;
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*")
@@ -306,7 +318,7 @@ public ResponseEntity<?> uploadResume(HttpServletRequest req,
 	CloudBlockBlob blob = null;
 	CandidateProfile candidate = profileRepository.findByEmail(email.toLowerCase().trim());
 	try {
-		String ofilename = file.getOriginalFilename();
+		String ofilename = email.toLowerCase().trim().replace("@", "").replace(".", "").concat(".pdf"); //replaced for unique file name file.getOriginalFilename();
 		System.err.println(ofilename);
 		blob = cloudBlobContainer.getBlockBlobReference(ofilename);
 		blob.upload(file.getInputStream(), -1);
@@ -323,6 +335,74 @@ public ResponseEntity<?> uploadResume(HttpServletRequest req,
 	return new ResponseEntity<String>("{\"path\":\""+uri.toASCIIString()+"\"}", HttpStatus.OK);
 }
 
+@AllArgsConstructor
+@Getter @Setter
+@NoArgsConstructor
+@EqualsAndHashCode @ToString
+class ScoreRequest {  
+	 public List<ScoreRequestItem> ScoreRequestItems;
+}
+
+@AllArgsConstructor
+@Getter @Setter
+@NoArgsConstructor
+@EqualsAndHashCode @ToString
+class ScoreRequestItem{
+	String email;
+	String resumePath;
+	long jobId;
+}
+
+@Autowired
+RestTemplate restTemplate;
+
+@PostMapping("/getScoresForJob")
+public ResponseEntity<?> getApplicantScoreForThisJob(@RequestBody String payload){
+	Job job =  gson.fromJson(payload, Job.class);
+	if(job!=null && job.getJobId()!=0  && job.getPostedUserEmail()!=null &&job.getPostedUserEmail().trim()!="") {
+		Job jobInDb = jobRepository.findByJobId(job.getJobId());
+		if(jobInDb!=null && jobInDb.getPostedUserEmail().trim().compareToIgnoreCase(job.getPostedUserEmail().trim().toLowerCase())==0) {
+			List<CandidateProfile> candidateProfiles = queryService.findCandidatesAppliedByJoinCandidateProfileAndUserJob(jobInDb.getJobId());
+			if(candidateProfiles!=null) {
+				ScoreRequest scoreRequest = new ScoreRequest();
+				scoreRequest.ScoreRequestItems = new ArrayList<ScoreRequestItem>();
+				for(CandidateProfile cprofile: candidateProfiles) {
+					ScoreRequestItem item = new ScoreRequestItem(cprofile.getEmail(), cprofile.getResumeLink(), jobInDb.getJobId());
+					scoreRequest.ScoreRequestItems.add(item);
+				}
+				String requestJson = new Gson().toJson(scoreRequest);
+				System.out.println(requestJson);
+				try {
+					//String url = "http://127.0.0.1:5000/api/getscores";
+					String url = "https://team6py.pythonanywhere.com/api/getscores";
+					HttpHeaders headers = new HttpHeaders();
+					headers.setContentType(MediaType.APPLICATION_JSON);
+					HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
+					String answer = restTemplate.postForObject(url, entity, String.class);
+					System.out.println(answer);
+
+					return new ResponseEntity<String>(answer, HttpStatus.OK); 
+				}catch (Exception ex) {
+					// TODO: handle exception
+					return new ResponseEntity<String>(ex.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+				}
+
+			}
+			else {
+				Response response = new Response(null, "No Applicants for this job");
+				return new ResponseEntity<String>(gson.toJson(response), HttpStatus.OK); 
+			}
+		}else {
+			Response response = new Response(null, "Job Id does not exist or wrong email provided");
+			return new ResponseEntity<String>(gson.toJson(response), HttpStatus.OK); 
+		}
+	}
+	else {
+		Response response = new Response(null, "Information not enough");
+		return new ResponseEntity<String>(gson.toJson(response), HttpStatus.OK); 
+	}
+	//return null;
+}
 //@RequestMapping(value="/uploadResume" , method=RequestMethod.POST, 
 //consumes="multipart/form-data", produces="application/json")  
 //void n() {

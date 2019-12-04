@@ -2,7 +2,10 @@ package centennial.comp231.smartresumebackend.POJO;
 
 import java.io.Serializable;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
@@ -22,6 +25,8 @@ import lombok.Setter;
 public class UserJob implements Serializable{
 	private static final long serialVersionUID = 1L;
 	@Id
+	@Column(unique = true, nullable = false,length = 8)
+	@GeneratedValue(strategy=GenerationType.AUTO)
 	long id;
 	@NotNull
     private String email;
