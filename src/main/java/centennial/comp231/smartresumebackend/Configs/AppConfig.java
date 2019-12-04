@@ -13,6 +13,4 @@ public class AppConfig {
 	    multipartResolver.setMaxUploadSize(20848820);
 	    return multipartResolver;
 	}
-	
-	
 }

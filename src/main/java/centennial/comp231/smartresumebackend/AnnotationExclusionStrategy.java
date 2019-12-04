@@ -8,7 +8,6 @@ public class AnnotationExclusionStrategy implements ExclusionStrategy {
     public boolean shouldSkipField(FieldAttributes f) {
         return f.getAnnotation(Exclude.class) != null;
     }
-
     @Override
     public boolean shouldSkipClass(Class<?> clazz) {
         return false;
