@@ -69,10 +69,10 @@ public class Controller {
 
 	@Autowired
 	JobRepository jobRepository;
-	
+
 	@Autowired
 	QueryService queryService;
-	
+
 	@Autowired
 	AppPDFParser appPDFParser;
 
@@ -231,20 +231,33 @@ public class Controller {
 		UserJob userJob = gson.fromJson(payload, UserJob.class);
 		Job availableJob = jobRepository.findByJobId(userJob.getJobId());
 		if(userJob!=null && userJob.getEmail().trim()!=""&&  userJob.getJobId()!=0 && availableJob !=null) {
-			UserJob appliedJob = userJobRepository.findByEmailAndJobId(userJob.getEmail(), userJob.getJobId());
-			if (appliedJob==null) {
-				UserJob newApplication = new UserJob();
-				newApplication.setEmail(userJob.getEmail().toLowerCase().trim());
-				newApplication.setJobId(userJob.getJobId());
-				userJobRepository.save(newApplication);
-				Response response = new Response(userJobMap.get(userJob.getEmail()), 
-						"Congratulations! You have applied to " 
-								+availableJob.getJobTitle() +
-								" with id " + availableJob.getJobId());
-				return gson.toJson(response);
-			}
-			else{
-				Response response = new Response(null, "You have already applied to this Job!");
+
+			CandidateProfile candidateProfile = profileRepository.findByEmail(userJob.getEmail().trim());
+			if(candidateProfile!=null)
+			{
+				if(candidateProfile.getResumeLink()!=null && candidateProfile.getResumeLink().trim()!="") {
+					UserJob appliedJob = userJobRepository.findByEmailAndJobId(userJob.getEmail(), userJob.getJobId());
+					if (appliedJob==null) {
+						UserJob newApplication = new UserJob();
+						newApplication.setEmail(userJob.getEmail().toLowerCase().trim());
+						newApplication.setJobId(userJob.getJobId());
+						userJobRepository.save(newApplication);
+						Response response = new Response(userJobMap.get(userJob.getEmail()), 
+								"Congratulations! You have applied to " 
+										+availableJob.getJobTitle() +
+										" with id " + availableJob.getJobId());
+						return gson.toJson(response);
+					}
+					else{
+						Response response = new Response(null, "You have already applied to this Job!");
+						return gson.toJson(response);
+					}
+				} else {
+					Response response = new Response(userJob, "Upload resume to apply for jobs");
+					return gson.toJson(response);
+				}
+			}else {
+				Response response = new Response(userJob, "Invalid user email");
 				return gson.toJson(response);
 			}
 		} else {
@@ -253,211 +266,211 @@ public class Controller {
 		}
 	}
 
-@RequestMapping(value = "/appliedjobs", method = RequestMethod.POST)
-public String appliedJobs(@RequestBody String payload) {
-	RegistrationInfo registrationInfo = gson.fromJson(payload, RegistrationInfo.class);
-	if (registrationInfo!=null && registrationInfo.getEmail().trim()!="") {
-		List<Job> appliedJobs = queryService.findJobsAppliedByJoinJobAndUserJob(registrationInfo.getEmail().toLowerCase().trim());
-		return gson.toJson(new Response(appliedJobs,""));
-	} else {
-		Response response = new Response(registrationInfo.getEmail(), "Email not registered");
-		return gson.toJson(response);
-	}
-}
-
-@RequestMapping(value = "/candidatesforjob", method = RequestMethod.POST)
-public String candidatesForJob(@RequestBody String payload) {
-	UserJob userjob = gson.fromJson(payload, UserJob.class);
-	Job jobExists = null;
-	if(userjob!=null && userjob.getJobId()!=0)
-	{
-		jobExists = jobRepository.findByJobId(userjob.getJobId());
-		if(jobExists!=null) {
-			List<CandidateProfile> candidatesAppliedForJob = queryService.findCandidatesAppliedByJoinCandidateProfileAndUserJob(userjob.getJobId());
-			return gson.toJson(candidatesAppliedForJob);
-		}else {
-			Response response = new Response(userjob.getJobId(), "No one applied for the job id");
+	@RequestMapping(value = "/appliedjobs", method = RequestMethod.POST)
+	public String appliedJobs(@RequestBody String payload) {
+		RegistrationInfo registrationInfo = gson.fromJson(payload, RegistrationInfo.class);
+		if (registrationInfo!=null && registrationInfo.getEmail().trim()!="") {
+			List<Job> appliedJobs = queryService.findJobsAppliedByJoinJobAndUserJob(registrationInfo.getEmail().toLowerCase().trim());
+			return gson.toJson(new Response(appliedJobs,""));
+		} else {
+			Response response = new Response(registrationInfo.getEmail(), "Email not registered");
 			return gson.toJson(response);
-		}	
-	} else {
-		Response response = new Response(userjob.getJobId(), "Job ID does not exist");
-		return gson.toJson(response);
+		}
 	}
-}
+
+	@RequestMapping(value = "/candidatesforjob", method = RequestMethod.POST)
+	public String candidatesForJob(@RequestBody String payload) {
+		UserJob userjob = gson.fromJson(payload, UserJob.class);
+		Job jobExists = null;
+		if(userjob!=null && userjob.getJobId()!=0)
+		{
+			jobExists = jobRepository.findByJobId(userjob.getJobId());
+			if(jobExists!=null) {
+				List<CandidateProfile> candidatesAppliedForJob = queryService.findCandidatesAppliedByJoinCandidateProfileAndUserJob(userjob.getJobId());
+				return gson.toJson(candidatesAppliedForJob);
+			}else {
+				Response response = new Response(userjob.getJobId(), "No one applied for the job id");
+				return gson.toJson(response);
+			}	
+		} else {
+			Response response = new Response(userjob.getJobId(), "Job ID does not exist");
+			return gson.toJson(response);
+		}
+	}
 
 
-@GetMapping("/")
-public ResponseEntity<?> home(){
-	return new ResponseEntity<Object>("Home", HttpStatus.OK);
-}
+	@GetMapping("/")
+	public ResponseEntity<?> home(){
+		return new ResponseEntity<Object>("Home", HttpStatus.OK);
+	}
 
 
-@RequestMapping(value="/multipleFilesUpload" , method=RequestMethod.POST, 
-consumes="multipart/form-data", produces="application/json")  
-public ResponseEntity<?> mutipleFileUpload(HttpServletRequest req, 
-		@RequestParam(value="file" , required = false) MultipartFile[] files) throws IOException{
-	for (MultipartFile file : files) {
-		File f= new File(file.getOriginalFilename());
+	@RequestMapping(value="/multipleFilesUpload" , method=RequestMethod.POST, 
+			consumes="multipart/form-data", produces="application/json")  
+	public ResponseEntity<?> mutipleFileUpload(HttpServletRequest req, 
+			@RequestParam(value="file" , required = false) MultipartFile[] files) throws IOException{
+		for (MultipartFile file : files) {
+			File f= new File(file.getOriginalFilename());
+			try {
+				System.err.println(f.getName());
+			} catch (IllegalStateException e) {
+				e.printStackTrace();
+			}
+		}
+		return null;
+	}
+
+	@Autowired
+	CloudBlobContainer cloudBlobContainer;
+
+	@RequestMapping(value="/uploadResume" , method=RequestMethod.POST,
+			consumes="multipart/form-data", produces="application/json")
+	public ResponseEntity<?> uploadResume(HttpServletRequest req, 
+			@RequestParam(value="file" , required = true) MultipartFile file, @RequestParam(value="email" , required = true) String email) throws Exception{
+		URI uri = null;
+		CloudBlockBlob blob = null;
+		CandidateProfile candidate = profileRepository.findByEmail(email.toLowerCase().trim());
 		try {
-			System.err.println(f.getName());
-		} catch (IllegalStateException e) {
+			String ofilename = email.toLowerCase().trim().replace("@", "").replace(".", "").concat(".pdf"); //replaced for unique file name file.getOriginalFilename();
+			System.err.println(ofilename);
+			blob = cloudBlobContainer.getBlockBlobReference(ofilename);
+			blob.upload(file.getInputStream(), -1);
+			uri = blob.getUri();
+			candidate.setResumeLink(uri.toASCIIString());
+			profileRepository.save(candidate);
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+		} catch (StorageException e) {
+			e.printStackTrace();
+		}catch (IOException e) {
 			e.printStackTrace();
 		}
+		return new ResponseEntity<String>("{\"path\":\""+uri.toASCIIString()+"\"}", HttpStatus.OK);
 	}
-	return null;
-}
 
-@Autowired
-CloudBlobContainer cloudBlobContainer;
-
-@RequestMapping(value="/uploadResume" , method=RequestMethod.POST,
-consumes="multipart/form-data", produces="application/json")
-public ResponseEntity<?> uploadResume(HttpServletRequest req, 
-		@RequestParam(value="file" , required = true) MultipartFile file, @RequestParam(value="email" , required = true) String email) throws Exception{
-	URI uri = null;
-	CloudBlockBlob blob = null;
-	CandidateProfile candidate = profileRepository.findByEmail(email.toLowerCase().trim());
-	try {
-		String ofilename = email.toLowerCase().trim().replace("@", "").replace(".", "").concat(".pdf"); //replaced for unique file name file.getOriginalFilename();
-		System.err.println(ofilename);
-		blob = cloudBlobContainer.getBlockBlobReference(ofilename);
-		blob.upload(file.getInputStream(), -1);
-		uri = blob.getUri();
-		candidate.setResumeLink(uri.toASCIIString());
-		profileRepository.save(candidate);
-	} catch (URISyntaxException e) {
-		e.printStackTrace();
-	} catch (StorageException e) {
-		e.printStackTrace();
-	}catch (IOException e) {
-		e.printStackTrace();
+	@AllArgsConstructor
+	@Getter @Setter
+	@NoArgsConstructor
+	@EqualsAndHashCode @ToString
+	class ScoreRequest {  
+		public List<ScoreRequestItem> ScoreRequestItems;
 	}
-	return new ResponseEntity<String>("{\"path\":\""+uri.toASCIIString()+"\"}", HttpStatus.OK);
-}
 
-@AllArgsConstructor
-@Getter @Setter
-@NoArgsConstructor
-@EqualsAndHashCode @ToString
-class ScoreRequest {  
-	 public List<ScoreRequestItem> ScoreRequestItems;
-}
+	@AllArgsConstructor
+	@Getter @Setter
+	@NoArgsConstructor
+	@EqualsAndHashCode @ToString
+	class ScoreRequestItem{
+		String email;
+		String resumePath;
+		long jobId;
+	}
 
-@AllArgsConstructor
-@Getter @Setter
-@NoArgsConstructor
-@EqualsAndHashCode @ToString
-class ScoreRequestItem{
-	String email;
-	String resumePath;
-	long jobId;
-}
+	@Autowired
+	RestTemplate restTemplate;
 
-@Autowired
-RestTemplate restTemplate;
+	@PostMapping("/getScoresForJob")
+	public ResponseEntity<?> getApplicantScoreForThisJob(@RequestBody String payload){
+		Job job =  gson.fromJson(payload, Job.class);
+		if(job!=null && job.getJobId()!=0  && job.getPostedUserEmail()!=null &&job.getPostedUserEmail().trim()!="") {
+			Job jobInDb = jobRepository.findByJobId(job.getJobId());
+			if(jobInDb!=null && jobInDb.getPostedUserEmail().trim().compareToIgnoreCase(job.getPostedUserEmail().trim().toLowerCase())==0) {
+				List<CandidateProfile> candidateProfiles = queryService.findCandidatesAppliedByJoinCandidateProfileAndUserJob(jobInDb.getJobId());
+				if(candidateProfiles!=null) {
+					ScoreRequest scoreRequest = new ScoreRequest();
+					scoreRequest.ScoreRequestItems = new ArrayList<ScoreRequestItem>();
+					for(CandidateProfile cprofile: candidateProfiles) {
+						ScoreRequestItem item = new ScoreRequestItem(cprofile.getEmail(), cprofile.getResumeLink(), jobInDb.getJobId());
+						scoreRequest.ScoreRequestItems.add(item);
+					}
+					String requestJson = new Gson().toJson(scoreRequest);
+					System.out.println(requestJson);
+					try {
+						//String url = "http://127.0.0.1:5000/api/getscores";
+						String url = "https://team6py.pythonanywhere.com/api/getscores";
+						HttpHeaders headers = new HttpHeaders();
+						headers.setContentType(MediaType.APPLICATION_JSON);
+						HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
+						String answer = restTemplate.postForObject(url, entity, String.class);
+						System.out.println(answer);
 
-@PostMapping("/getScoresForJob")
-public ResponseEntity<?> getApplicantScoreForThisJob(@RequestBody String payload){
-	Job job =  gson.fromJson(payload, Job.class);
-	if(job!=null && job.getJobId()!=0  && job.getPostedUserEmail()!=null &&job.getPostedUserEmail().trim()!="") {
-		Job jobInDb = jobRepository.findByJobId(job.getJobId());
-		if(jobInDb!=null && jobInDb.getPostedUserEmail().trim().compareToIgnoreCase(job.getPostedUserEmail().trim().toLowerCase())==0) {
-			List<CandidateProfile> candidateProfiles = queryService.findCandidatesAppliedByJoinCandidateProfileAndUserJob(jobInDb.getJobId());
-			if(candidateProfiles!=null) {
-				ScoreRequest scoreRequest = new ScoreRequest();
-				scoreRequest.ScoreRequestItems = new ArrayList<ScoreRequestItem>();
-				for(CandidateProfile cprofile: candidateProfiles) {
-					ScoreRequestItem item = new ScoreRequestItem(cprofile.getEmail(), cprofile.getResumeLink(), jobInDb.getJobId());
-					scoreRequest.ScoreRequestItems.add(item);
+						return new ResponseEntity<String>(answer, HttpStatus.OK); 
+					}catch (Exception ex) {
+						// TODO: handle exception
+						return new ResponseEntity<String>(ex.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+					}
+
 				}
-				String requestJson = new Gson().toJson(scoreRequest);
-				System.out.println(requestJson);
-				try {
-					//String url = "http://127.0.0.1:5000/api/getscores";
-					String url = "https://team6py.pythonanywhere.com/api/getscores";
-					HttpHeaders headers = new HttpHeaders();
-					headers.setContentType(MediaType.APPLICATION_JSON);
-					HttpEntity<String> entity = new HttpEntity<String>(requestJson, headers);
-					String answer = restTemplate.postForObject(url, entity, String.class);
-					System.out.println(answer);
-
-					return new ResponseEntity<String>(answer, HttpStatus.OK); 
-				}catch (Exception ex) {
-					// TODO: handle exception
-					return new ResponseEntity<String>(ex.toString(), HttpStatus.INTERNAL_SERVER_ERROR);
+				else {
+					Response response = new Response(null, "No Applicants for this job");
+					return new ResponseEntity<String>(gson.toJson(response), HttpStatus.OK); 
 				}
-
-			}
-			else {
-				Response response = new Response(null, "No Applicants for this job");
+			}else {
+				Response response = new Response(null, "Job Id does not exist or wrong email provided");
 				return new ResponseEntity<String>(gson.toJson(response), HttpStatus.OK); 
 			}
-		}else {
-			Response response = new Response(null, "Job Id does not exist or wrong email provided");
+		}
+		else {
+			Response response = new Response(null, "Information not enough");
 			return new ResponseEntity<String>(gson.toJson(response), HttpStatus.OK); 
 		}
+		//return null;
 	}
-	else {
-		Response response = new Response(null, "Information not enough");
-		return new ResponseEntity<String>(gson.toJson(response), HttpStatus.OK); 
-	}
-	//return null;
-}
-//@RequestMapping(value="/uploadResume" , method=RequestMethod.POST, 
-//consumes="multipart/form-data", produces="application/json")  
-//void n() {
-//	try {
-//		URI uri = new UploadBlob().upload(file);
-//		System.err.println(file.getOriginalFilename());
-//		System.out.println("URI: "+ uri);
-//		String path = transferFileAndReturnPath(file);
-//		return new ResponseEntity<String>("This is mock. Will be uploaded to " +path+" with uri "+uri, HttpStatus.OK);
-//	} catch (IllegalStateException e) {
-//		e.printStackTrace();
-//	}
-//	return null;
-//}
+	//@RequestMapping(value="/uploadResume" , method=RequestMethod.POST, 
+	//consumes="multipart/form-data", produces="application/json")  
+	//void n() {
+	//	try {
+	//		URI uri = new UploadBlob().upload(file);
+	//		System.err.println(file.getOriginalFilename());
+	//		System.out.println("URI: "+ uri);
+	//		String path = transferFileAndReturnPath(file);
+	//		return new ResponseEntity<String>("This is mock. Will be uploaded to " +path+" with uri "+uri, HttpStatus.OK);
+	//	} catch (IllegalStateException e) {
+	//		e.printStackTrace();
+	//	}
+	//	return null;
+	//}
 
-//private String transferFileAndReturnPath(MultipartFile file) throws Exception {
-//	if (!file.isEmpty()) {
-//		try {
-//			String uploadsDir = "\\uploads\\";
-//
-//			//gets System TEMP path
-//			//String realPathtoUploads =  request.getServletContext().getRealPath(uploadsDir);
-//
-//			String realPathtoUploads =  Paths.get("").toAbsolutePath().toString()+uploadsDir;
-//			if(! new File(realPathtoUploads ).exists())
-//			{
-//				new File(realPathtoUploads).mkdir();
-//			}
-//
-//			log.info("realPathtoUploads = {}", realPathtoUploads);
-//			String orgName = file.getOriginalFilename();
-//			String filePath = realPathtoUploads + orgName;
-//			//File dest = new File(filePath);
-//			//file.transferTo(dest);
-//			return filePath;
-//		}catch(Exception ex) {
-//			log.error(ex.toString());
-//			throw ex;
-//		}}
-//	else
-//		throw new Exception("No files selected");
-//}
+	//private String transferFileAndReturnPath(MultipartFile file) throws Exception {
+	//	if (!file.isEmpty()) {
+	//		try {
+	//			String uploadsDir = "\\uploads\\";
+	//
+	//			//gets System TEMP path
+	//			//String realPathtoUploads =  request.getServletContext().getRealPath(uploadsDir);
+	//
+	//			String realPathtoUploads =  Paths.get("").toAbsolutePath().toString()+uploadsDir;
+	//			if(! new File(realPathtoUploads ).exists())
+	//			{
+	//				new File(realPathtoUploads).mkdir();
+	//			}
+	//
+	//			log.info("realPathtoUploads = {}", realPathtoUploads);
+	//			String orgName = file.getOriginalFilename();
+	//			String filePath = realPathtoUploads + orgName;
+	//			//File dest = new File(filePath);
+	//			//file.transferTo(dest);
+	//			return filePath;
+	//		}catch(Exception ex) {
+	//			log.error(ex.toString());
+	//			throw ex;
+	//		}}
+	//	else
+	//		throw new Exception("No files selected");
+	//}
 
-//	@RequestMapping(value="/uploadJobDescription" , method=RequestMethod.POST, 
-//			consumes="multipart/form-data", produces="application/json")  
-//	public ResponseEntity<?> uploadJobDescription(HttpServletRequest req, 
-//			@RequestParam(value="file" , required = false) MultipartFile file) throws Exception{
-//		try {
-//			System.err.println(file.getOriginalFilename());
-//			return new ResponseEntity<>(appPDFParser.readPDF(file), HttpStatus.OK);
-//		} catch (IllegalStateException e) {
-//			e.printStackTrace();
-//		}
-//		return null;
-//	}
+	//	@RequestMapping(value="/uploadJobDescription" , method=RequestMethod.POST, 
+	//			consumes="multipart/form-data", produces="application/json")  
+	//	public ResponseEntity<?> uploadJobDescription(HttpServletRequest req, 
+	//			@RequestParam(value="file" , required = false) MultipartFile file) throws Exception{
+	//		try {
+	//			System.err.println(file.getOriginalFilename());
+	//			return new ResponseEntity<>(appPDFParser.readPDF(file), HttpStatus.OK);
+	//		} catch (IllegalStateException e) {
+	//			e.printStackTrace();
+	//		}
+	//		return null;
+	//	}
 
 
 
